@@ -20,6 +20,7 @@ public:
 		assert(firstAvailable_);
 		TObject* obj = reinterpret_cast<TObject*>(firstAvailable_);
 		firstAvailable_ = firstAvailable_->next;
+		*(reinterpret_cast<int*>(obj)) = DeadBeef_;
 		return obj;
 	}
 
@@ -37,6 +38,7 @@ private:
 		TObject obj;
 		PoolNode* next;
 	};
+	static const int DeadBeef_ = 0xdeadbeef;
 	std::array<PoolNode, PoolSize> pool_;
 	PoolNode* firstAvailable_;
 	std::mutex mutex_;
