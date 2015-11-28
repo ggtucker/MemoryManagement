@@ -191,6 +191,7 @@ private:
 	}
 
 	bool unsubdivide_(TreeNode* node) {
+		// Is parent node of leaf nodes
 		if (!is_leaf_(node) && is_leaf_(node->nw)) {
 			size_t childSum = size_(node);
 			if (childSum <= capacity_) {
