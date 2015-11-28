@@ -18,9 +18,6 @@
     <ClInclude Include="TMemoryPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GameObject.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="QuadTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>

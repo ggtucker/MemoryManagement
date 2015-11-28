@@ -2,13 +2,22 @@
 
 #include <iostream>
 #include <vector>
-#include "GameObject.h"
 #include "TMemoryPool.h"
 #include "Boundary2D.h"
 
-template<size_t PoolSize = 256>
+template<typename TObject, size_t PoolSize = 256>
 class QuadTree {
 public:
+	struct Entry {
+		TObject obj;
+		Point2D pos;
+		Entry(TObject obj, Point2D pos) : obj{ obj }, pos{ pos } {}
+		~Entry() {}
+		bool operator==(const Entry& other) const {
+			return this->obj == other.obj;
+		}
+	};
+
 	QuadTree() : min_quad_{ 1.0f, 1.0f } {
 		root_ = create_node_(Boundary2D());
 	}
@@ -40,15 +49,23 @@ public:
 		return size_(root_);
 	}
 
-	bool insert(const GameObject& obj) {
-		return insert_(root_, obj);
+	bool insert(const TObject& obj, const Point2D& pos) {
+		return insert_(root_, Entry(obj, pos));
 	}
 
-	bool remove(const GameObject& obj) {
-		return remove_(root_, obj);
+	bool insert(const Entry& entry) {
+		return insert_(root_, entry);
 	}
 
-	std::vector<GameObject> queryRange(const Boundary2D& range) const {
+	bool remove(const TObject& obj, const Point2D& pos) {
+		return remove_(root_, Entry(obj, pos));
+	}
+
+	bool remove(const Entry& entry) {
+		return remove_(root_, entry);
+	}
+
+	std::vector<Entry> queryRange(const Boundary2D& range) const {
 		return query_range_(root_, range);
 	}
 
@@ -58,14 +75,14 @@ public:
 
 private:
 	struct TreeNode {
-		std::vector<GameObject> objects;
+		std::vector<Entry> entries;
 		Boundary2D boundary;
 		TreeNode* nw;
 		TreeNode* ne;
 		TreeNode* sw;
 		TreeNode* se;
 		TreeNode(size_t capacity) : nw { nullptr }, ne{ nullptr }, sw{ nullptr }, se{ nullptr } {
-			objects.reserve(capacity);
+			entries.reserve(capacity);
 		}
 		~TreeNode() {}
 	};
@@ -85,93 +102,93 @@ private:
 		return node != nullptr && node->nw == nullptr;
 	}
 
-	bool insert_(TreeNode* node, const GameObject& obj) {
-		// Object cannot be added: not within boundary
-		if (!node->boundary.contains(obj.pos)) {
+	bool insert_(TreeNode* node, const Entry& entry) {
+		// entryect cannot be added: not within boundary
+		if (!node->boundary.contains(entry.pos)) {
 			return false;
 		}
 		
-		// Only add object to leaf node
+		// Only add entryect to leaf node
 		if (is_leaf_(node)) {
 			// Added if not at capacity
-			if (node->objects.size() < capacity_) {
-				node->objects.push_back(obj);
+			if (node->entries.size() < capacity_) {
+				node->entries.push_back(entry);
 				return true;
 			}
 			// Subdivide if at capacity
 			// If can't subdivide, just add to this node
 			if (!subdivide_(node)) {
-				node->objects.push_back(obj);
+				node->entries.push_back(entry);
 				return true;
 			}
 		}
 
-		if (insert_(node->nw, obj)) return true;
-		if (insert_(node->ne, obj)) return true;
-		if (insert_(node->sw, obj)) return true;
-		if (insert_(node->se, obj)) return true;
+		if (insert_(node->nw, entry)) return true;
+		if (insert_(node->ne, entry)) return true;
+		if (insert_(node->sw, entry)) return true;
+		if (insert_(node->se, entry)) return true;
 
-		// Object cannot be added for some reason (this should never happen)
+		// entryect cannot be added for some reason (this should never happen)
 		return false;
 	}
 
-	bool remove_(TreeNode* node, const GameObject& obj) {
-		// Object cannot be removed: not within boundary
-		if (!node->boundary.contains(obj.pos)) {
+	bool remove_(TreeNode* node, const Entry& entry) {
+		// entryect cannot be removed: not within boundary
+		if (!node->boundary.contains(entry.pos)) {
 			return false;
 		}
 
-		// Remove object if this quad is leaf and its present
+		// Remove entryect if this quad is leaf and its present
 		if (is_leaf_(node)) {
-			std::vector<GameObject>& objects = node->objects;
-			std::vector<GameObject>::iterator newEnd = std::remove(objects.begin(), objects.end(), obj);
-			if (newEnd != objects.end()) {
-				objects.erase(newEnd, objects.end());
+			std::vector<Entry>& entries = node->entries;
+			std::vector<Entry>::iterator newEnd = std::remove(entries.begin(), entries.end(), entry);
+			if (newEnd != entries.end()) {
+				entries.erase(newEnd, entries.end());
 				return true;
 			}
 			return false;
 		}
 
-		// Remove object from children and unsubdivide if possible
-		if (remove_(node->nw, obj) || remove_(node->ne, obj) || remove_(node->sw, obj) || remove_(node->se, obj)) {
+		// Remove entryect from children and unsubdivide if possible
+		if (remove_(node->nw, entry) || remove_(node->ne, entry) || remove_(node->sw, entry) || remove_(node->se, entry)) {
 			unsubdivide_(node);
 			return true;
 		}
 
-		// Object to remove was not found in the children
+		// entryect to remove was not found in the children
 		return false;
 	}
 
-	std::vector<GameObject> query_range_(TreeNode* node, const Boundary2D& range) const {
-		std::vector<GameObject> objectsInRange;
+	std::vector<Entry> query_range_(TreeNode* node, const Boundary2D& range) const {
+		std::vector<Entry> entriesInRange;
 
 		// Abort if range does not intersect this quad's boundary
 		if (!node->boundary.intersects(range)) {
-			return objectsInRange;
+			return entriesInRange;
 		}
 
-		// Check the objects at this quad level
+		// Check the entries at this quad level
 		if (is_leaf_(node)) {
-			const std::vector<GameObject>& objects = node->objects;
-			for (size_t i = 0; i < objects.size(); ++i) {
-				if (range.contains(objects[i].pos)) {
-					objectsInRange.push_back(objects[i]);
+			const std::vector<Entry>& entries = node->entries;
+			for (size_t i = 0; i < entries.size(); ++i) {
+				if (range.contains(entries[i].pos)) {
+					entriesInRange.push_back(entries[i]);
 				}
 			}
-			return objectsInRange;
+			return entriesInRange;
 		}
 
-		// Add the objects from the children
-		std::vector<GameObject> nwObjects = query_range_(node->nw, range);
-		std::vector<GameObject> neObjects = query_range_(node->ne, range);
-		std::vector<GameObject> swObjects = query_range_(node->sw, range);
-		std::vector<GameObject> seObjects = query_range_(node->se, range);
-		objectsInRange.insert(objectsInRange.end(), nwObjects.begin(), nwObjects.end());
-		objectsInRange.insert(objectsInRange.end(), neObjects.begin(), neObjects.end());
-		objectsInRange.insert(objectsInRange.end(), swObjects.begin(), swObjects.end());
-		objectsInRange.insert(objectsInRange.end(), seObjects.begin(), seObjects.end());
+		// Add the entries from the children
+		std::vector<Entry> nwEntries = query_range_(node->nw, range);
+		std::vector<Entry> neEntries = query_range_(node->ne, range);
+		std::vector<Entry> swEntries = query_range_(node->sw, range);
+		std::vector<Entry> seEntries = query_range_(node->se, range);
+		entriesInRange.insert(entriesInRange.end(), nwEntries.begin(), nwEntries.end());
+		entriesInRange.insert(entriesInRange.end(), neEntries.begin(), neEntries.end());
+		entriesInRange.insert(entriesInRange.end(), swEntries.begin(), swEntries.end());
+		entriesInRange.insert(entriesInRange.end(), seEntries.begin(), seEntries.end());
 
-		return objectsInRange;
+		return entriesInRange;
 	}
 
 	bool subdivide_(TreeNode* node) {
@@ -184,13 +201,13 @@ private:
 		node->ne = create_node_(boundary.getNE());
 		node->sw = create_node_(boundary.getSW());
 		node->se = create_node_(boundary.getSE());
-		for (const GameObject& obj : node->objects) {
-			insert_(node->nw, obj);
-			insert_(node->ne, obj);
-			insert_(node->sw, obj);
-			insert_(node->se, obj);
+		for (const Entry& entry : node->entries) {
+			insert_(node->nw, entry);
+			insert_(node->ne, entry);
+			insert_(node->sw, entry);
+			insert_(node->se, entry);
 		}
-		node->objects.clear();
+		node->entries.clear();
 		return true;
 	}
 
@@ -199,15 +216,15 @@ private:
 		if (!is_leaf_(node) && is_leaf_(node->nw)) {
 			size_t childSum = size_(node);
 			if (childSum <= capacity_) {
-				const std::vector<GameObject>& objects = node->objects;
-				const std::vector<GameObject>& nwObjects = node->nw->objects;
-				const std::vector<GameObject>& neObjects = node->ne->objects;
-				const std::vector<GameObject>& swObjects = node->sw->objects;
-				const std::vector<GameObject>& seObjects = node->se->objects;
-				objects.insert(objects.end(), nwObjects.begin(), nwObjects.end());
-				objects.insert(objects.end(), neObjects.begin(), neObjects.end());
-				objects.insert(objects.end(), swObjects.begin(), swObjects.end());
-				objects.insert(objects.end(), seObjects.begin(), seObjects.end());
+				const std::vector<Entry>& entries = node->entries;
+				const std::vector<Entry>& nwEntries = node->nw->entries;
+				const std::vector<Entry>& neEntries = node->ne->entries;
+				const std::vector<Entry>& swEntries = node->sw->entries;
+				const std::vector<Entry>& seEntries = node->se->entries;
+				entries.insert(entries.end(), nwEntries.begin(), nwEntries.end());
+				entries.insert(entries.end(), neEntries.begin(), neEntries.end());
+				entries.insert(entries.end(), swEntries.begin(), swEntries.end());
+				entries.insert(entries.end(), seEntries.begin(), seEntries.end());
 				delete_children_(node);
 				return true;
 			}
@@ -240,7 +257,7 @@ private:
 
 	size_t size_(TreeNode* node) const {
 		if (node) {
-			return node->objects.size() + size_(node->nw) + size_(node->ne) + size_(node->sw) + size_(node->se);
+			return node->entries.size() + size_(node->nw) + size_(node->ne) + size_(node->sw) + size_(node->se);
 		}
 		return 0;
 	}
@@ -248,7 +265,7 @@ private:
 	TreeNode* copy_tree_(TreeNode* node) const {
 		if (node) {
 			TreeNode* copied = create_node_(node->boundary);
-			copied->objects = node->objects;
+			copied->entries = node->entries;
 			copied->nw = copy_tree_(node->nw);
 			copied->ne = copy_tree_(node->ne);
 			copied->sw = copy_tree_(node->sw);
@@ -264,10 +281,10 @@ private:
 			print_(node->ne);
 			print_(node->sw);
 			print_(node->se);
-			if (is_leaf_(node) && !node->objects.empty()) {
-				std::cout << node->boundary << " size(" << node->objects.size() << "): ";
-				for (const GameObject& obj : node->objects) {
-					std::cout << obj;
+			if (is_leaf_(node) && !node->entries.empty()) {
+				std::cout << node->boundary << " size(" << node->entries.size() << "): ";
+				for (const Entry& entry : node->entries) {
+					std::cout << "[" << entry.obj << ":" << entry.pos << "]";
 				}
 				std::cout << std::endl;
 			}
