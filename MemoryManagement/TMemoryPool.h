@@ -45,6 +45,7 @@ public:
 	void deallocate(TObject* obj) {
 		std::lock_guard<std::mutex> lock(mutex_);
 		if (obj) {
+			obj->~TObject();
 			PoolNode* node = reinterpret_cast<PoolNode*>(obj);
 			node->next = firstAvailable_;
 			firstAvailable_ = node;

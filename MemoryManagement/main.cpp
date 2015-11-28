@@ -20,8 +20,8 @@ int main() {
 	srand(static_cast <unsigned> (time(0)));
 	for (int i = 0; i < 50; ++i) {
 		size_t id = i;
-		float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.0f;
-		float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 100.0f;
+		float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 200.0f;
+		float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 200.0f;
 		Point2D pos(x, y);
 		qtree.insert(id, pos);
 	}
@@ -32,6 +32,15 @@ int main() {
 		qtree.insert(id, pos);
 	}
 
+	qtree.print();
+
+	for (int i = 0; i < 20; ++i) {
+		size_t id = 1337 + i;
+		Point2D pos(0.0f, 0.0f);
+		qtree.remove(id, pos);
+	}
+
+	std::cout << "DIVIDER" << std::endl;
 	qtree.print();
 	
 	Boundary2D targetRange(Point2D(100.0f, 100.0f), Point2D(20.0f, 20.0f));

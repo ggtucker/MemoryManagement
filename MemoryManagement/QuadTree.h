@@ -5,7 +5,7 @@
 #include "TMemoryPool.h"
 #include "Boundary2D.h"
 
-template<typename TObject, size_t PoolSize = 256>
+template<typename TObject, size_t PoolSize = 1024>
 class QuadTree {
 public:
 	struct Entry {
@@ -216,7 +216,7 @@ private:
 		if (!is_leaf_(node) && is_leaf_(node->nw)) {
 			size_t childSum = size_(node);
 			if (childSum <= capacity_) {
-				const std::vector<Entry>& entries = node->entries;
+				std::vector<Entry>& entries = node->entries;
 				const std::vector<Entry>& nwEntries = node->nw->entries;
 				const std::vector<Entry>& neEntries = node->ne->entries;
 				const std::vector<Entry>& swEntries = node->sw->entries;
