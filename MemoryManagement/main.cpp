@@ -33,7 +33,7 @@ int main() {
 
 	qtree.print();
 
-	std::vector<GameObject> objects = qtree.queryRange(Boundary2D(Point2D(0.5f, 0.5f), Point2D(0.1f, 0.1f)));
+	std::vector<GameObject> objects = qtree.queryRange(Boundary2D(Point2D(100.0f, 100.0f), Point2D(20.0f, 20.0f)));
 	for (const GameObject& obj : objects) {
 		std::cout << "In Range: " << obj << std::endl;
 	}
