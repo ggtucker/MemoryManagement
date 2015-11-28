@@ -13,7 +13,10 @@ int main() {
 		std::cout << num << " -> " << *num << std::endl;
 	}*/
 
-	QuadTree<> qtree(Boundary2D(Point2D(100.0f, 100.0f), Point2D(100.0f, 100.0f)), 5);
+	Boundary2D quadBoundary(Point2D(100.0f, 100.0f), Point2D(100.0f, 100.0f));
+	size_t quadCapacity = 5;
+	Point2D minQuadSize(10.0f, 10.0f);
+	QuadTree<> qtree(quadBoundary, quadCapacity, minQuadSize);
 	srand(static_cast <unsigned> (time(0)));
 	for (int i = 0; i < 50; ++i) {
 		GameObject obj;

@@ -3,6 +3,7 @@
 #include <mutex>
 #include <array>
 #include <cassert>
+#include <utility>
 
 template<typename TObject, size_t PoolSize>
 class TMemoryPool {
@@ -29,11 +30,16 @@ public:
 	}
 
 	TObject* create() {
+		return create<>();
+	}
+
+	template<class... Args>
+	TObject* create(Args&&... args) {
 		std::lock_guard<std::mutex> lock(mutex_);
 		assert(firstAvailable_);
 		TObject* obj = reinterpret_cast<TObject*>(firstAvailable_);
 		firstAvailable_ = firstAvailable_->next;
-		return new(obj) TObject();
+		return new(obj) TObject(std::forward<Args>(args)...);
 	}
 
 	void deallocate(TObject* obj) {

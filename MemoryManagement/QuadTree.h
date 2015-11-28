@@ -9,15 +9,15 @@
 template<size_t PoolSize = 256>
 class QuadTree {
 public:
-	QuadTree() {
+	QuadTree() : min_quad_{ 1.0f, 1.0f } {
 		root_ = create_node_(Boundary2D());
 	}
 
-	QuadTree(const Boundary2D& boundary, size_t capacity) : capacity_{ capacity } {
+	QuadTree(const Boundary2D& boundary, size_t capacity, const Point2D& minQuad) : capacity_{ capacity }, min_quad_{ minQuad } {
 		root_ = create_node_(boundary);
 	}
 
-	QuadTree(const QuadTree& other) : capacity_{ other.capacity_ } {
+	QuadTree(const QuadTree& other) : capacity_{ other.capacity_ }, min_quad_{ other.min_quad_ } {
 		root_ = copy_tree_(other.root_);
 	}
 
@@ -27,6 +27,7 @@ public:
 		if (this != &other) {
 			this->root_ = copy_tree_(other.root_);
 			this->capacity_ = other.capacity_;
+			this->min_quad_ = other.min_quad_;
 		}
 		return *this;
 	}
@@ -63,16 +64,19 @@ private:
 		TreeNode* ne;
 		TreeNode* sw;
 		TreeNode* se;
-		TreeNode() : nw{ nullptr }, ne{ nullptr }, sw{ nullptr }, se{ nullptr } {}
+		TreeNode(size_t capacity) : nw { nullptr }, ne{ nullptr }, sw{ nullptr }, se{ nullptr } {
+			objects.reserve(capacity);
+		}
 		~TreeNode() {}
 	};
 
 	TMemoryPool<TreeNode, PoolSize> pool_;
 	TreeNode* root_;
 	size_t capacity_;
+	Point2D min_quad_;
 
 	TreeNode* create_node_(const Boundary2D& boundary) {
-		TreeNode* node = pool_.create();
+		TreeNode* node = pool_.create<size_t>(std::move(capacity_));
 		node->boundary = boundary;
 		return node;
 	}
@@ -173,7 +177,7 @@ private:
 	bool subdivide_(TreeNode* node) {
 		const Boundary2D& boundary = node->boundary;
 		Point2D hhLength = boundary.getHalfHalfLength();
-		if (hhLength.getX() <= 1.0f || hhLength.getY() <= 1.0f) {
+		if (hhLength.getX() <= min_quad_.getX() || hhLength.getY() <= min_quad_.getY()) {
 			return false;
 		}
 		node->nw = create_node_(boundary.getNW());
