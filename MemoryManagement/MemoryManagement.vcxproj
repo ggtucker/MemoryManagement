@@ -142,7 +142,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Boundary2D.h" />
+    <ClInclude Include="Boundary3D.h" />
+    <ClInclude Include="GameObject.h" />
+    <ClInclude Include="Point2D.h" />
+    <ClInclude Include="Point3D.h" />
     <ClInclude Include="TMemoryPool.h" />
+    <ClInclude Include="QuadTree.h" />
+    <ClInclude Include="TMemoryPoolAllocator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
