@@ -42,7 +42,9 @@ public:
 	}
 
 	void clear() {
+		Boundary2D boundary = root_->boundary;
 		clear_(root_);
+		root_ = create_node_(boundary);
 	}
 
 	size_t size() const {
@@ -103,12 +105,12 @@ private:
 	}
 
 	bool insert_(TreeNode* node, const Entry& entry) {
-		// entryect cannot be added: not within boundary
+		// object cannot be added: not within boundary
 		if (!node->boundary.contains(entry.pos)) {
 			return false;
 		}
 		
-		// Only add entryect to leaf node
+		// Only add object to leaf node
 		if (is_leaf_(node)) {
 			// Added if not at capacity
 			if (node->entries.size() < capacity_) {
@@ -128,17 +130,17 @@ private:
 		if (insert_(node->sw, entry)) return true;
 		if (insert_(node->se, entry)) return true;
 
-		// entryect cannot be added for some reason (this should never happen)
+		// object cannot be added for some reason (this should never happen)
 		return false;
 	}
 
 	bool remove_(TreeNode* node, const Entry& entry) {
-		// entryect cannot be removed: not within boundary
+		// object cannot be removed: not within boundary
 		if (!node->boundary.contains(entry.pos)) {
 			return false;
 		}
 
-		// Remove entryect if this quad is leaf and its present
+		// Remove object if this quad is leaf and its present
 		if (is_leaf_(node)) {
 			std::vector<Entry>& entries = node->entries;
 			std::vector<Entry>::iterator newEnd = std::remove(entries.begin(), entries.end(), entry);
@@ -149,13 +151,13 @@ private:
 			return false;
 		}
 
-		// Remove entryect from children and unsubdivide if possible
+		// Remove object from children and unsubdivide if possible
 		if (remove_(node->nw, entry) || remove_(node->ne, entry) || remove_(node->sw, entry) || remove_(node->se, entry)) {
 			unsubdivide_(node);
 			return true;
 		}
 
-		// entryect to remove was not found in the children
+		// object to remove was not found in the children
 		return false;
 	}
 
