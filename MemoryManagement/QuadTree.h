@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <memory>
 #include "TMemoryPool.h"
 #include "Boundary2D.h"
 
@@ -18,25 +19,57 @@ public:
 		}
 	};
 
-	QuadTree() : min_quad_{ 1.0f, 1.0f } {
+	QuadTree() :
+			pool_{ new TMemoryPool<TreeNode, PoolSize> },
+			min_quad_{ 1.0f, 1.0f } {
+
 		root_ = create_node_(Boundary2D());
 	}
 
-	QuadTree(const Boundary2D& boundary, size_t capacity, const Point2D& minQuad) : capacity_{ capacity }, min_quad_{ minQuad } {
+	QuadTree(const Boundary2D& boundary, size_t capacity, const Point2D& minQuad) :
+			pool_{ new TMemoryPool<TreeNode, PoolSize> },
+			capacity_{ capacity },
+			min_quad_{ minQuad } {
+
 		root_ = create_node_(boundary);
 	}
 
-	QuadTree(const QuadTree& other) : capacity_{ other.capacity_ }, min_quad_{ other.min_quad_ } {
+	QuadTree(const QuadTree& other) :
+			pool_{ new TMemoryPool<TreeNode, PoolSize> },
+			capacity_{ other.capacity_ },
+			min_quad_{ other.min_quad_ } {
+
 		root_ = copy_tree_(other.root_);
+	}
+
+	QuadTree(QuadTree&& other) :
+			pool_{ std::move(other.pool_) },
+			root_{ other.root_ },
+			capacity_{ other.capacity_ },
+			min_quad_{ other.min_quad_ } {
+
+		other.root_ = nullptr;
 	}
 
 	virtual ~QuadTree() {}
 
 	QuadTree& operator=(const QuadTree& other) {
 		if (this != &other) {
+			clear_(this->root_);
 			this->root_ = copy_tree_(other.root_);
 			this->capacity_ = other.capacity_;
 			this->min_quad_ = other.min_quad_;
+		}
+		return *this;
+	}
+
+	QuadTree& operator=(QuadTree&& other) {
+		if (this != &other) {
+			this->pool_ = std::move(other.pool_);
+			this->root_ = other.root_;
+			this->capacity_ = other.capacity_;
+			this->min_quad_ = other.min_quad_;
+			other.root_ = nullptr;
 		}
 		return *this;
 	}
@@ -89,13 +122,13 @@ private:
 		~TreeNode() {}
 	};
 
-	TMemoryPool<TreeNode, PoolSize> pool_;
+	std::unique_ptr<TMemoryPool<TreeNode, PoolSize>> pool_;
 	TreeNode* root_;
 	size_t capacity_;
 	Point2D min_quad_;
 
 	TreeNode* create_node_(const Boundary2D& boundary) {
-		TreeNode* node = pool_.create<size_t>(std::move(capacity_));
+		TreeNode* node = pool_->create<size_t>(std::move(capacity_));
 		node->boundary = boundary;
 		return node;
 	}
@@ -236,10 +269,10 @@ private:
 
 	void delete_children_(TreeNode* node) {
 		if (node) {
-			pool_.deallocate(node->nw);
-			pool_.deallocate(node->ne);
-			pool_.deallocate(node->sw);
-			pool_.deallocate(node->se);
+			pool_->deallocate(node->nw);
+			pool_->deallocate(node->ne);
+			pool_->deallocate(node->sw);
+			pool_->deallocate(node->se);
 			node->nw = nullptr;
 			node->ne = nullptr;
 			node->sw = nullptr;
@@ -253,7 +286,7 @@ private:
 			clear_(node->ne);
 			clear_(node->sw);
 			clear_(node->se);
-			pool_.deallocate(node);
+			pool_->deallocate(node);
 		}
 	}
 
@@ -286,7 +319,7 @@ private:
 			if (is_leaf_(node) && !node->entries.empty()) {
 				std::cout << node->boundary << " size(" << node->entries.size() << "): ";
 				for (const Entry& entry : node->entries) {
-					std::cout << "[" << entry.obj << ":" << entry.pos << "]";
+					std::cout << "[" << entry.obj << "]";
 				}
 				std::cout << std::endl;
 			}
